@@ -480,8 +480,16 @@
             viewTicketResult.classList.remove('hidden');
         }
 
-        // Admin Modal Controls
-        document.getElementById('btn-admin-toggle').onclick = () => modalAdmin.classList.remove('hidden');
+        // Admin Modal Controls (Password Protection Added)
+        document.getElementById('btn-admin-toggle').onclick = () => {
+            const inputPassword = prompt("선생님 관리자 비밀번호를 입력해주세요:");
+            if (inputPassword === "0923") {
+                modalAdmin.classList.remove('hidden');
+            } else if (inputPassword !== null) {
+                alert("비밀번호가 올바르지 않습니다.");
+            }
+        };
+
         document.getElementById('btn-close-admin').onclick = () => modalAdmin.classList.add('hidden');
 
         document.getElementById('btn-save-start-time').onclick = () => {
