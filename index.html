@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ 실시간 발표 순서 티켓팅</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;700;800&display=swap');
+        body { font-family: 'Pretendard', sans-serif; }
+        .ticket-edge {
+            background-image: radial-gradient(circle at 0 50%, transparent 12px, #1f2937 13px);
+        }
+        .bg-grid-pattern {
+            background-size: 30px 30px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen bg-grid-pattern flex flex-col justify-between selection:bg-indigo-500 selection:text-white">
+
+    <!-- Header Navigation -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/30">
+                    🎟️
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg tracking-tight bg-gradient-to-r from-white via-slate-200 to-indigo-300 bg-clip-text text-transparent">발표 순서 티켓팅</h1>
+                    <p class="text-xs text-slate-400">학급 실시간 선착순 좌석 지정 시스템</p>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <!-- Clock Badge -->
+                <div class="bg-slate-800/80 border border-slate-700/60 rounded-lg px-3 py-1.5 flex items-center space-x-2">
+                    <i class="fa-regular fa-clock text-indigo-400 text-sm"></i>
+                    <span id="live-clock" class="font-mono text-sm font-semibold text-slate-200">00:00:00</span>
+                </div>
+                <!-- Admin Toggle Button -->
+                <button id="btn-admin-toggle" class="bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium px-3 py-2 rounded-lg border border-slate-700 transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-gear text-indigo-400"></i>
+                    <span>선생님 관리자</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-4xl mx-auto px-4 py-8 flex-grow w-full">
+
+        <!-- VIEW 1: 대기실 및 학생 정보 입력 -->
+        <section id="view-waiting" class="space-y-6">
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-md relative overflow-hidden">
+                <div class="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="text-center max-w-lg mx-auto space-y-3 mb-8">
+                    <span class="inline-block bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs font-semibold px-3 py-1 rounded-full">STEP 01</span>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white">학생 정보 입력 및 대기실</h2>
+                    <p class="text-slate-400 text-sm">티켓팅 시작 전 본인의 학급 정보를 입력하고 대기해주세요.</p>
+                </div>
+
+                <!-- Status Banner -->
+                <div id="status-banner" class="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 text-center space-y-1 mb-6">
+                    <div class="text-xs font-semibold text-amber-400 uppercase tracking-wider">티켓팅 오픈 대기 중</div>
+                    <div id="countdown-text" class="text-xl sm:text-2xl font-black font-mono text-amber-300">오픈 시간 계산 중...</div>
+                </div>
+
+                <!-- Input Form -->
+                <div class="space-y-4 max-w-md mx-auto">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">학급 (반)</label>
+                            <input type="text" id="input-class" placeholder="예: 3반" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder:text-slate-600">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-300 mb-1">번호</label>
+                            <input type="number" id="input-number" placeholder="예: 12" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder:text-slate-600">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-300 mb-1">이름</label>
+                        <input type="text" id="input-name" placeholder="예: 홍길동" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition placeholder:text-slate-600">
+                    </div>
+
+                    <button id="btn-enter-ticketing" disabled class="w-full bg-slate-800 text-slate-500 cursor-not-allowed font-bold py-4 rounded-xl shadow-lg transition duration-200 flex items-center justify-center space-x-2 text-base mt-2">
+                        <i class="fa-solid fa-ticket"></i>
+                        <span id="btn-enter-text">티켓팅 오픈 대기 중</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: 좌석 예매 (티켓팅) -->
+        <section id="view-ticketing" class="hidden space-y-6">
+            <!-- User Status Header -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-full bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-indigo-400 font-bold text-sm">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div>
+                        <div class="text-xs text-slate-400">접속 중인 학생</div>
+                        <div id="current-user-badge" class="font-bold text-slate-100 text-sm">3반 12번 홍길동</div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4 text-xs">
+                    <div class="flex items-center space-x-1.5">
+                        <span class="w-3 h-3 rounded-full bg-indigo-600 inline-block"></span>
+                        <span class="text-slate-300">선택 가능</span>
+                    </div>
+                    <div class="flex items-center space-x-1.5">
+                        <span class="w-3 h-3 rounded-full bg-slate-800 border border-slate-700 inline-block"></span>
+                        <span class="text-slate-500">예매 완료 (SOLD OUT)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seat Grid Container -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl">
+                <div class="text-center mb-6">
+                    <h2 class="text-xl sm:text-2xl font-bold text-white mb-1">원하는 발표 순서(좌석)를 선택하세요</h2>
+                    <p class="text-slate-400 text-xs">좌석 번호가 곧 본인의 발표 순서가 됩니다. (선착순 마감)</p>
+                </div>
+
+                <div id="seat-grid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                    <!-- Seats rendered dynamically via JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW 3: 예매 완료 티켓 결과 -->
+        <section id="view-ticket-result" class="hidden space-y-6 max-w-lg mx-auto">
+            <div class="text-center space-y-2 mb-4">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-xl">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h2 class="text-2xl font-black text-white">발표 순서 예매 성공!</h2>
+                <p class="text-slate-400 text-xs">축하합니다! 확정된 발표 순서 티켓입니다.</p>
+            </div>
+
+            <!-- Ticket Design -->
+            <div class="bg-slate-900 border border-indigo-500/40 rounded-2xl shadow-2xl overflow-hidden relative">
+                <!-- Top Color Bar -->
+                <div class="h-3 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+
+                <div class="p-6 space-y-6">
+                    <div class="flex justify-between items-start border-b border-slate-800 pb-4">
+                        <div>
+                            <div class="text-xs font-bold text-indigo-400 uppercase tracking-widest">PRESENTATION TICKET</div>
+                            <div class="text-lg font-extrabold text-white">발표 순서 확정 티켓</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 px-2.5 py-1 rounded-full font-mono">CONFIRMED</span>
+                        </div>
+                    </div>
+
+                    <!-- Order Highlight Number -->
+                    <div class="text-center py-4 bg-slate-950/60 rounded-xl border border-slate-800">
+                        <div class="text-xs text-slate-400 mb-1">확정 발표 순서</div>
+                        <div id="ticket-order-num" class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-pink-400 font-mono">
+                            제 0 번
+                        </div>
+                    </div>
+
+                    <!-- Details Table -->
+                    <div class="grid grid-cols-2 gap-4 text-xs">
+                        <div>
+                            <span class="text-slate-500 block">학급 및 번호</span>
+                            <span id="ticket-class-num" class="font-bold text-slate-200 text-sm">3반 12번</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">발표자 이름</span>
+                            <span id="ticket-user-name" class="font-bold text-slate-200 text-sm">홍길동</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">예매 완료 시각</span>
+                            <span id="ticket-time" class="font-bold text-slate-300 font-mono">14:00:02</span>
+                        </div>
+                        <div>
+                            <span class="text-slate-500 block">티켓 식별 코드</span>
+                            <span id="ticket-id" class="font-bold text-indigo-400 font-mono">#TK-8921</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Perforated Line Effect -->
+                <div class="border-t-2 border-dashed border-slate-800 relative my-2">
+                    <div class="w-5 h-5 bg-slate-950 rounded-full absolute -left-3 -top-2.5 border-r border-slate-800"></div>
+                    <div class="w-5 h-5 bg-slate-950 rounded-full absolute -right-3 -top-2.5 border-l border-slate-800"></div>
+                </div>
+
+                <!-- Footer Barcode -->
+                <div class="p-4 bg-slate-950/80 text-center space-y-2">
+                    <div class="font-mono text-2xl tracking-widest text-slate-600 select-none">||| | ||||| ||| || ||||</div>
+                    <p class="text-[10px] text-slate-500">본 티켓은 학급 발표 순서 정하기 결과 저장용입니다.</p>
+                </div>
+            </div>
+
+            <button onclick="window.print()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold py-3 rounded-xl border border-slate-700 transition flex items-center justify-center space-x-2 text-xs">
+                <i class="fa-solid fa-print"></i>
+                <span>티켓 인쇄 / PDF 저장하기</span>
+            </button>
+        </section>
+
+        <!-- VIEW 4: 선생님 관리자 대시보드 (모달 형태) -->
+        <div id="modal-admin" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-6 shadow-2xl max-h-[90vh] overflow-y-auto">
+                <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-sliders text-indigo-400 text-lg"></i>
+                        <h3 class="font-bold text-lg text-white">선생님 관리자 설정</h3>
+                    </div>
+                    <button id="btn-close-admin" class="text-slate-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <!-- Admin Controls -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <label class="block text-xs font-semibold text-slate-300">티켓팅 시작 시각 설정</label>
+                        <input type="datetime-local" id="admin-start-time" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <button id="btn-save-start-time" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs transition">
+                            시작 시간 저장
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <label class="block text-xs font-semibold text-slate-300">총 발표 좌석 수 설정</label>
+                        <input type="number" id="admin-total-seats" min="5" max="50" value="20" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500">
+                        <button id="btn-save-seats" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded-lg text-xs transition">
+                            좌석 수 변경
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Action Buttons -->
+                <div class="flex flex-wrap gap-2 pt-2">
+                    <button id="btn-force-open" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold py-2.5 px-3 rounded-lg transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>즉시 오픈 (테스트)</span>
+                    </button>
+                    <button id="btn-reset-db" class="flex-1 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold py-2.5 px-3 rounded-lg transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>전체 데이터 초기화</span>
+                    </button>
+                </div>
+
+                <!-- Live Status Table -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">실시간 현황 리더보드</h4>
+                    <div class="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden max-h-48 overflow-y-auto">
+                        <table class="w-full text-left text-xs text-slate-300">
+                            <thead class="bg-slate-800/80 text-slate-400 text-[11px] uppercase">
+                                <tr>
+                                    <th class="p-2.5">순서</th>
+                                    <th class="p-2.5">학급/번호</th>
+                                    <th class="p-2.5">이름</th>
+                                    <th class="p-2.5">예매 시각</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-live-table" class="divide-y divide-slate-800">
+                                <!-- Live rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-slate-900 py-4 text-center text-xs text-slate-600">
+        <p>실시간 학급 발표 순서 티켓팅 시스템 &copy; 2026</p>
+    </footer>
+
+    <!-- Firebase ESM Scripts -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, runTransaction, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDdPd4wWqXL2mYB99yNFNOybtsfotu3Sz0",
+            authDomain: "drawing-order-c6cf7.firebaseapp.com",
+            projectId: "drawing-order-c6cf7",
+            storageBucket: "drawing-order-c6cf7.firebasestorage.app",
+            messagingSenderId: "606762508358",
+            appId: "1:606762508358:web:392fa62120ee3cffab6a47",
+            databaseURL: "https://drawing-order-c6cf7-default-rtdb.firebaseio.com"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // App State
+        let currentUser = null;
+        let configData = { startTime: null, totalSeats: 20, forceOpen: false };
+        let seatsData = {};
+
+        // DOM Elements
+        const liveClockEl = document.getElementById('live-clock');
+        const countdownTextEl = document.getElementById('countdown-text');
+        const btnEnterEl = document.getElementById('btn-enter-ticketing');
+        const btnEnterTextEl = document.getElementById('btn-enter-text');
+        const seatGridEl = document.getElementById('seat-grid');
+        const adminLiveTableEl = document.getElementById('admin-live-table');
+
+        // Views
+        const viewWaiting = document.getElementById('view-waiting');
+        const viewTicketing = document.getElementById('view-ticketing');
+        const viewTicketResult = document.getElementById('view-ticket-result');
+        const modalAdmin = document.getElementById('modal-admin');
+
+        // Clock Update
+        setInterval(() => {
+            const now = new Date();
+            liveClockEl.textContent = now.toTimeString().split(' ')[0];
+            checkCountdown();
+        }, 1000);
+
+        // Firebase Listeners
+        onValue(ref(db, 'config'), (snapshot) => {
+            const val = snapshot.val();
+            if (val) {
+                configData = val;
+                if (configData.totalSeats) document.getElementById('admin-total-seats').value = configData.totalSeats;
+                if (configData.startTime) document.getElementById('admin-start-time').value = configData.startTime;
+            }
+            checkCountdown();
+            renderSeats();
+        });
+
+        onValue(ref(db, 'seats'), (snapshot) => {
+            seatsData = snapshot.val() || {};
+            renderSeats();
+            renderAdminTable();
+        });
+
+        // Countdown & Opening Logic
+        function checkCountdown() {
+            if (configData.forceOpen) {
+                countdownTextEl.textContent = "⚡ 선생님에 의해 티켓팅이 즉시 오픈되었습니다!";
+                enableEnterButton(true);
+                return;
+            }
+
+            if (!configData.startTime) {
+                countdownTextEl.textContent = "선생님이 시작 시간을 설정 중입니다...";
+                enableEnterButton(false);
+                return;
+            }
+
+            const targetTime = new Date(configData.startTime).getTime();
+            const nowTime = new Date().getTime();
+            const diff = targetTime - nowTime;
+
+            if (diff <= 0) {
+                countdownTextEl.textContent = "🎉 티켓팅이 오픈되었습니다! 아래 버튼을 누르세요.";
+                enableEnterButton(true);
+            } else {
+                const minutes = Math.floor(diff / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                countdownTextEl.textContent = `오픈까지 ${minutes}분 ${seconds < 10 ? '0' : ''}${seconds}초 남음`;
+                enableEnterButton(false);
+            }
+        }
+
+        function enableEnterButton(enabled) {
+            if (enabled) {
+                btnEnterEl.disabled = false;
+                btnEnterEl.className = "w-full bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-black py-4 rounded-xl shadow-lg shadow-indigo-500/30 transition duration-200 cursor-pointer flex items-center justify-center space-x-2 text-base";
+                btnEnterTextEl.textContent = "티켓팅 입장하기";
+            } else {
+                btnEnterEl.disabled = true;
+                btnEnterEl.className = "w-full bg-slate-800 text-slate-500 cursor-not-allowed font-bold py-4 rounded-xl transition flex items-center justify-center space-x-2 text-base";
+                btnEnterTextEl.textContent = "티켓팅 오픈 대기 중";
+            }
+        }
+
+        // Student Enter Action
+        btnEnterEl.addEventListener('click', () => {
+            const cls = document.getElementById('input-class').value.trim();
+            const num = document.getElementById('input-number').value.trim();
+            const name = document.getElementById('input-name').value.trim();
+
+            if (!cls || !num || !name) {
+                alert("반, 번호, 이름을 모두 입력해 주세요!");
+                return;
+            }
+
+            currentUser = { cls, num, name };
+            document.getElementById('current-user-badge').textContent = `${cls} ${num}번 ${name}`;
+
+            viewWaiting.classList.add('hidden');
+            viewTicketing.classList.remove('hidden');
+        });
+
+        // Render Seats
+        function renderSeats() {
+            seatGridEl.innerHTML = '';
+            const total = configData.totalSeats || 20;
+
+            for (let i = 1; i <= total; i++) {
+                const seatInfo = seatsData[i];
+                const seatBtn = document.createElement('button');
+
+                if (seatInfo) {
+                    // Sold out
+                    seatBtn.className = "bg-slate-950/80 border border-slate-800 text-slate-600 rounded-xl p-4 flex flex-col items-center justify-center space-y-1 cursor-not-allowed relative overflow-hidden";
+                    seatBtn.innerHTML = `
+                        <span class="text-xs font-mono font-bold text-slate-600">SEAT ${i < 10 ? '0' + i : i}</span>
+                        <span class="text-sm font-black text-rose-500/80">SOLD OUT</span>
+                        <span class="text-[10px] text-slate-500 truncate max-w-full">${seatInfo.cls} ${seatInfo.name}</span>
+                    `;
+                    seatBtn.disabled = true;
+                } else {
+                    // Available
+                    seatBtn.className = "bg-slate-800/80 hover:bg-indigo-600/20 border border-slate-700 hover:border-indigo-500 text-slate-200 rounded-xl p-4 flex flex-col items-center justify-center space-y-1 transition duration-150 group cursor-pointer shadow-md";
+                    seatBtn.innerHTML = `
+                        <span class="text-xs font-mono font-bold text-indigo-400 group-hover:text-indigo-300">${i}번 순서</span>
+                        <span class="text-lg font-black text-white group-hover:scale-110 transition">예매 가능</span>
+                        <span class="text-[10px] text-slate-400">클릭하여 선택</span>
+                    `;
+                    seatBtn.onclick = () => claimSeat(i);
+                }
+                seatGridEl.appendChild(seatBtn);
+            }
+        }
+
+        // Claim Seat with Firebase Transaction
+        async function claimSeat(seatNumber) {
+            if (!currentUser) return;
+
+            const seatRef = ref(db, `seats/${seatNumber}`);
+            const nowStr = new Date().toTimeString().split(' ')[0];
+
+            try {
+                const result = await runTransaction(seatRef, (currentData) => {
+                    if (currentData !== null) {
+                        return; // Abort if already taken
+                    }
+                    return {
+                        cls: currentUser.cls,
+                        num: currentUser.num,
+                        name: currentUser.name,
+                        time: nowStr,
+                        timestamp: Date.now()
+                    };
+                });
+
+                if (result.committed) {
+                    // Success
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                    showTicketResult(seatNumber, nowStr);
+                } else {
+                    alert(`이미 다른 학생이 ${seatNumber}번 순서를 선점했습니다! 다른 번호를 선택해주세요.`);
+                }
+            } catch (err) {
+                alert("예매 도중 오류가 발생했습니다: " + err.message);
+            }
+        }
+
+        // Show Result Ticket
+        function showTicketResult(orderNum, timeStr) {
+            document.getElementById('ticket-order-num').textContent = `제 ${orderNum} 번`;
+            document.getElementById('ticket-class-num').textContent = `${currentUser.cls} ${currentUser.num}번`;
+            document.getElementById('ticket-user-name').textContent = currentUser.name;
+            document.getElementById('ticket-time').textContent = timeStr;
+            document.getElementById('ticket-id').textContent = `#TK-${Math.floor(1000 + Math.random() * 9000)}`;
+
+            viewTicketing.classList.add('hidden');
+            viewTicketResult.classList.remove('hidden');
+        }
+
+        // Admin Modal Controls
+        document.getElementById('btn-admin-toggle').onclick = () => modalAdmin.classList.remove('hidden');
+        document.getElementById('btn-close-admin').onclick = () => modalAdmin.classList.add('hidden');
+
+        document.getElementById('btn-save-start-time').onclick = () => {
+            const val = document.getElementById('admin-start-time').value;
+            if (!val) return alert("시작 시간을 설정해 주세요.");
+            set(ref(db, 'config/startTime'), val);
+            set(ref(db, 'config/forceOpen'), false);
+            alert("시작 시간이 저장되었습니다.");
+        };
+
+        document.getElementById('btn-save-seats').onclick = () => {
+            const val = parseInt(document.getElementById('admin-total-seats').value);
+            if (!val || val < 1) return alert("올바른 좌석 수를 입력해 주세요.");
+            set(ref(db, 'config/totalSeats'), val);
+            alert("총 좌석 수가 변경되었습니다.");
+        };
+
+        document.getElementById('btn-force-open').onclick = () => {
+            set(ref(db, 'config/forceOpen'), true);
+            alert("티켓팅이 즉시 오픈되었습니다.");
+        };
+
+        document.getElementById('btn-reset-db').onclick = () => {
+            if (confirm("정말로 모든 예매 데이터를 초기화하시겠습니까?")) {
+                remove(ref(db, 'seats'));
+                set(ref(db, 'config/forceOpen'), false);
+                alert("초기화 완료!");
+            }
+        };
+
+        function renderAdminTable() {
+            adminLiveTableEl.innerHTML = '';
+            const entries = Object.entries(seatsData);
+            entries.sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+
+            if (entries.length === 0) {
+                adminLiveTableEl.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-slate-500">예매된 좌석이 없습니다.</td></tr>`;
+                return;
+            }
+
+            entries.forEach(([seatNum, info]) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="p-2.5 font-bold text-indigo-400">${seatNum}번</td>
+                    <td class="p-2.5">${info.cls} ${info.num}번</td>
+                    <td class="p-2.5 font-bold text-slate-200">${info.name}</td>
+                    <td class="p-2.5 font-mono text-slate-400">${info.time}</td>
+                `;
+                adminLiveTableEl.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>
